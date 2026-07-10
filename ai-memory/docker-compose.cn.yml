@@ -1,5 +1,6 @@
-# 仅覆盖基础镜像为国内可访问的镜像源（DaoCloud 代理）
+# 国内镜像源覆盖（DaoCloud 代理 Docker Hub）
 # 用法: docker compose -f docker-compose.yml -f docker-compose.cn.yml up --build
+# Windows: 双击 docker-up-cn.bat
 
 services:
   postgres:
@@ -7,3 +8,18 @@ services:
 
   redis:
     image: docker.m.daocloud.io/library/redis:7-alpine
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        PYTHON_IMAGE: docker.m.daocloud.io/library/python:3.12-slim
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: docker.m.daocloud.io/library/node:22-alpine
+        NGINX_IMAGE: docker.m.daocloud.io/library/nginx:alpine

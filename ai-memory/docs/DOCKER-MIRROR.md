@@ -7,7 +7,14 @@ failed to resolve reference "docker.io/library/postgres:16-alpine"
 dial tcp ... registry-1.docker.io:443: connectex ...
 ```
 
-说明 **连不上 Docker Hub**，不是项目配置错误。
+或构建时报：
+
+```
+FROM python:3.12-slim
+failed to fetch oauth token: Post "https://auth.docker.io/token": dial tcp ... connectex
+```
+
+说明 **连不上 Docker Hub**（含拉取镜像与构建时的基础镜像），不是 Dockerfile 写错。
 
 ---
 
@@ -29,7 +36,16 @@ cd ai-memory
 docker compose -f docker-compose.yml -f docker-compose.cn.yml up --build
 ```
 
-`docker-compose.cn.yml` 会把 `postgres`、`redis` 换成 DaoCloud 代理地址，无需改原文件。
+`docker-compose.cn.yml` 会把以下镜像换成 DaoCloud 代理：
+
+| 用途 | 镜像 |
+|------|------|
+| 数据库 | `postgres:16-alpine` |
+| 缓存 | `redis:7-alpine` |
+| 后端构建 | `python:3.12-slim` |
+| 前端构建 | `node:22-alpine`、`nginx:alpine` |
+
+无需改原 `docker-compose.yml` / `Dockerfile`。
 
 ---
 
@@ -67,12 +83,11 @@ docker compose up --build
 ```powershell
 docker pull docker.m.daocloud.io/library/postgres:16-alpine
 docker pull docker.m.daocloud.io/library/redis:7-alpine
+docker pull docker.m.daocloud.io/library/python:3.12-slim
+docker pull docker.m.daocloud.io/library/node:22-alpine
+docker pull docker.m.daocloud.io/library/nginx:alpine
 
-# 打标签为 compose 默认名（若仍用原版 docker-compose.yml）
-docker tag docker.m.daocloud.io/library/postgres:16-alpine postgres:16-alpine
-docker tag docker.m.daocloud.io/library/redis:7-alpine redis:7-alpine
-
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.cn.yml up --build
 ```
 
 ---
@@ -107,7 +122,7 @@ docker pull hello-world
 docker compose -f docker-compose.yml -f docker-compose.cn.yml config
 ```
 
-应看到 postgres/redis 使用 `docker.m.daocloud.io/...` 地址。
+应看到 postgres/redis 及 backend/frontend 的 build args 使用 `docker.m.daocloud.io/...` 地址。
 
 ---
 
