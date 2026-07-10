@@ -1,0 +1,36 @@
+"""Resolve the platform adapter for an account."""
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import Settings, get_settings
+from app.integrations.base import PlatformAdapter
+from app.integrations.manual import ManualAdapter
+from app.integrations.wechat_channels import WechatChannelsAdapter
+from app.models.account import Account
+
+WECHAT_CHANNELS_PLATFORM = "wechat_channels"
+
+
+def get_adapter_for_account(
+    account: Account,
+    db: AsyncSession,
+    *,
+    settings: Settings | None = None,
+) -> PlatformAdapter:
+    """Pick adapter by account platform and global integration settings."""
+    cfg = settings or get_settings()
+
+    if (
+        account.platform == WECHAT_CHANNELS_PLATFORM
+        and cfg.wechat_channels_enabled
+        and cfg.wechat_channels_app_id
+        and cfg.wechat_channels_app_secret
+    ):
+        return WechatChannelsAdapter(
+            app_id=cfg.wechat_channels_app_id,
+            app_secret=cfg.wechat_channels_app_secret,
+            access_token=cfg.wechat_channels_access_token,
+            timeout_seconds=cfg.wechat_channels_timeout_seconds,
+        )
+
+    return ManualAdapter(db)
