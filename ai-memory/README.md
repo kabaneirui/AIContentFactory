@@ -27,6 +27,8 @@ cp .env.example .env          # 编辑填入 DeepSeek API Key
 docker compose up --build
 ```
 
+国内镜像拉取失败 → 双击 **`docker-up-cn.bat`** 或见 [docs/DOCKER-MIRROR.md](docs/DOCKER-MIRROR.md)
+
 - 前端：http://localhost:3000
 - API：http://localhost:8000/docs
 

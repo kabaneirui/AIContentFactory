@@ -49,6 +49,15 @@ OPENAI_MODEL=deepseek-chat
 docker compose up --build
 ```
 
+**国内拉镜像失败？** 见 [DOCKER-MIRROR.md](DOCKER-MIRROR.md)，或：
+
+```bash
+# 使用国内镜像源
+docker compose -f docker-compose.yml -f docker-compose.cn.yml up --build
+```
+
+Windows 可双击 **`docker-up-cn.bat`**。
+
 首次启动约 3–5 分钟（下载镜像 + 构建）。
 
 ### 4. 访问
@@ -289,5 +298,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 | `start.bat` / `start.sh` | Win / Mac | 启动服务 |
 | `启动 AI Memory.command` | Mac | 双击启动 |
 | `docker compose up` | Win / Mac | Docker 启动 |
+| `docker-up-cn.bat` | Windows | Docker 启动（国内镜像） |
 | `.env` | 通用 | API 密钥与数据库配置 |
+| `docs/DOCKER-MIRROR.md` | 通用 | Docker 镜像拉取失败 |
 | `docs/USAGE.md` | 通用 | 功能使用教程 |

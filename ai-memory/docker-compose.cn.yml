@@ -1,0 +1,9 @@
+# 仅覆盖基础镜像为国内可访问的镜像源（DaoCloud 代理）
+# 用法: docker compose -f docker-compose.yml -f docker-compose.cn.yml up --build
+
+services:
+  postgres:
+    image: docker.m.daocloud.io/library/postgres:16-alpine
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:7-alpine
