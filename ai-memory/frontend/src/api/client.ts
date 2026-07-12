@@ -44,6 +44,9 @@ import type {
   BrainLearning,
   DecideTodayResponse,
   PerformanceUpdate,
+  GenerateScriptRequest,
+  GenerateScriptResponse,
+  PipelinePublishResponse,
   PredictApiResponse,
   ProfileUpdate,
   PromptEvolveResponse,
@@ -246,6 +249,35 @@ export const api = {
     }
     return response.json() as Promise<VideoImportResult>;
   },
+
+  generateScript: (accountId: number, data: GenerateScriptRequest) =>
+    request<GenerateScriptResponse>(`/accounts/${accountId}/workflow/generate-script`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  pipelinePublish: (
+    accountId: number,
+    data: {
+      title: string;
+      script?: string;
+      hook?: string;
+      template?: string;
+      knowledge_source?: string;
+      scene_style?: string;
+      duration?: number;
+      cta?: string;
+      season?: string;
+      festival?: string;
+      category?: string;
+      require_prediction_pass?: boolean;
+      tag_inline?: boolean;
+    },
+  ) =>
+    request<PipelinePublishResponse>(`/accounts/${accountId}/pipeline/publish`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 export { ApiError };

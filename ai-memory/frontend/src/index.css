@@ -879,6 +879,88 @@ th {
   font-size: 0.875rem;
 }
 
+.rec-card.selectable {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rec-card.selectable.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.rec-select-label {
+  display: block;
+  cursor: pointer;
+}
+
+.rec-select-label input[type="radio"] {
+  margin-right: 0.5rem;
+}
+
+.workflow-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.workflow-step:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.workflow-step.active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(108, 140, 255, 0.12);
+}
+
+.workflow-step.done {
+  color: var(--success);
+}
+
+.workflow-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.workflow-step.active .workflow-step-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.predict-summary {
+  margin-bottom: 1rem;
+}
+
+.predict-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     position: static;

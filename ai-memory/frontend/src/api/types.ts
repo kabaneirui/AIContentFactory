@@ -138,9 +138,15 @@ export interface DecisionRecommendation {
   suggested_publish_time: string;
   reasons: string[];
   combined_score: number;
+  account_weight_score?: number;
+  trend_weight_score?: number;
+  matched_trend: string | null;
   template: string | null;
   hook: string | null;
-  matched_trend: string | null;
+  knowledge_source: string | null;
+  scene_style: string | null;
+  duration: number | null;
+  cta: string | null;
 }
 
 export interface DecideTodayResponse {
@@ -148,7 +154,56 @@ export interface DecideTodayResponse {
   generated_at: string;
   season: string | null;
   festival: string | null;
+  platform: string | null;
   recommendations: DecisionRecommendation[];
+}
+
+export interface GenerateScriptRequest {
+  title: string;
+  hook?: string;
+  template?: string;
+  knowledge_source?: string;
+  scene_style?: string;
+  duration?: number;
+  cta?: string;
+  season?: string;
+  festival?: string;
+  matched_trend?: string;
+  reasons?: string[];
+}
+
+export interface GenerateScriptResponse {
+  title: string;
+  script: string;
+  hook: string | null;
+  template: string | null;
+  knowledge_source: string | null;
+  scene_style: string | null;
+  duration: number | null;
+  cta: string | null;
+  season: string | null;
+  festival: string | null;
+  matched_trend: string | null;
+  prompt_version: string | null;
+  generated_by: "llm" | "rule";
+}
+
+export interface PipelinePublishResponse {
+  success: boolean;
+  video_id: number | null;
+  lifecycle_status: string | null;
+  dna_tags: Record<string, string> | null;
+  sync_tasks_scheduled: number;
+  prompt_version: string | null;
+  message: string | null;
+  steps: {
+    prediction_checked: boolean;
+    prediction_passed: boolean | null;
+    content_memory_created: boolean;
+    sync_tasks_scheduled: number;
+    dna_tagged: boolean;
+    performance_updated: boolean;
+  };
 }
 
 export interface PredictionResult {

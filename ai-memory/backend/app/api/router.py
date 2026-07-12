@@ -9,6 +9,7 @@ from app.api.prediction import router as prediction_router
 from app.api.prompts import router as prompts_router
 from app.api.trends import router as trends_router
 from app.api.videos import router as videos_router
+from app.api.workflow import router as workflow_router
 
 api_router = APIRouter()
 api_router.include_router(accounts_router)
@@ -20,3 +21,4 @@ api_router.include_router(trends_router)
 api_router.include_router(decision_router)
 api_router.include_router(prompts_router)
 api_router.include_router(videos_router)
+api_router.include_router(workflow_router)

@@ -6,7 +6,7 @@ import { ConfirmDialog, ErrorMessage, FormField, Loading, Modal } from "./ui";
 
 const navItems = [
   { to: "/", label: "账号画像", end: true },
-  { to: "/decision", label: "决策中心" },
+  { to: "/decision", label: "创作工作流" },
   { to: "/videos", label: "视频记忆" },
   { to: "/trends", label: "热点管理" },
   { to: "/learning", label: "学习报告" },
