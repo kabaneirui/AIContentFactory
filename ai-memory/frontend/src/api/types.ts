@@ -7,6 +7,18 @@ export interface Account {
   created_at: string;
 }
 
+export interface AccountCreate {
+  name: string;
+  platform: string;
+}
+
+export interface AccountUpdate {
+  name?: string;
+  platform?: string;
+  predict_threshold?: number | null;
+  auto_evolve?: boolean;
+}
+
 export interface AccountProfile {
   id: number;
   account_id: number;
@@ -21,6 +33,10 @@ export interface AccountProfile {
   best_knowledge_source: string | null;
   locked_fields: string[] | null;
   updated_at: string;
+}
+
+export interface ProfileUpdate {
+  locked_fields?: string[] | null;
 }
 
 export interface BrainLearning {
@@ -48,6 +64,44 @@ export interface VideoPerformance {
   comments: number;
   shares: number;
   collects: number;
+}
+
+export interface VideoCreate {
+  title: string;
+  platform?: string;
+  platform_video_id?: string;
+  script?: string;
+  hook?: string;
+  template?: string;
+  knowledge_source?: string;
+  prompt?: string;
+  scene_style?: string;
+  duration?: number;
+  cta?: string;
+  publish_time?: string;
+  season?: string;
+  festival?: string;
+  weather?: string;
+  keyword?: string;
+  category?: string;
+  dna_tags?: Record<string, string>;
+}
+
+export interface PerformanceUpdate {
+  views?: number;
+  ctr?: number;
+  rate_3s?: number;
+  finish_rate?: number;
+  average_watch?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  collects?: number;
+  forwards?: number;
+  fans_increase?: number;
+  reach_level?: string;
+  recommend_rate?: number;
+  engagement_rate?: number;
 }
 
 export interface Video {
@@ -145,4 +199,55 @@ export interface VideoImportResult {
   skipped: number;
   errors: { row: number; field: string | null; message: string }[];
   video_ids: number[];
+}
+
+export interface TrendTopic {
+  id: number;
+  topic: string;
+  category: string | null;
+  heat_score: number;
+  source: string;
+  trend_date: string;
+  season: string | null;
+  festival: string | null;
+  trend_direction: "rising" | "falling" | "stable" | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrendTopicCreate {
+  topic: string;
+  category?: string;
+  heat_score?: number;
+  source?: string;
+  trend_date?: string;
+  season?: string;
+  festival?: string;
+}
+
+export interface TrendTopicUpdate {
+  topic?: string;
+  category?: string;
+  heat_score?: number;
+  source?: string;
+  trend_date?: string;
+  season?: string;
+  festival?: string;
+}
+
+export interface TrendTopicListResponse {
+  items: TrendTopic[];
+  total: number;
+}
+
+export interface TrendImportResult {
+  imported: number;
+  skipped: number;
+  errors: { row: number; field: string | null; message: string }[];
+}
+
+export interface PromptVersionCreate {
+  prompt_content: string;
+  change_log?: string;
+  activate?: boolean;
 }

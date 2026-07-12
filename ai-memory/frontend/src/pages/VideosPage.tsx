@@ -41,6 +41,9 @@ export function VideosPage() {
       </header>
 
       <div className="toolbar">
+        <Link to="/videos/new" className="btn btn-primary">
+          + 发布视频
+        </Link>
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -63,7 +66,7 @@ export function VideosPage() {
         <Loading />
       ) : videos.length === 0 ? (
         <Card title="暂无视频">
-          <p>请通过数据导入页上传历史视频，或调用 API 发布新视频。</p>
+          <p>请通过数据导入页上传历史视频，或点击「发布视频」录入新内容。</p>
         </Card>
       ) : (
         <>

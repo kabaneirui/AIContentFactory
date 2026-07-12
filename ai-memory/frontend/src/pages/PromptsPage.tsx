@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { PromptVersion } from "../api/types";
 import { useAccount } from "../context/AccountContext";
-import { Card, ErrorMessage, Loading, Stars } from "../components/ui";
+import { Card, ErrorMessage, FormField, Loading, Modal, Stars } from "../components/ui";
 
 export function PromptsPage() {
   const { accountId } = useAccount();
@@ -13,6 +13,13 @@ export function PromptsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [promptContent, setPromptContent] = useState("");
+  const [changeLog, setChangeLog] = useState("");
+  const [activateOnCreate, setActivateOnCreate] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const loadPrompts = useCallback(async () => {
     if (!accountId) return;
@@ -78,6 +85,38 @@ export function PromptsPage() {
     }
   };
 
+  const openCreate = () => {
+    setPromptContent("");
+    setChangeLog("");
+    setActivateOnCreate(false);
+    setCreateError("");
+    setCreateOpen(true);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accountId || promptContent.trim().length < 10) {
+      setCreateError("Prompt 内容至少 10 个字符");
+      return;
+    }
+    setCreating(true);
+    setCreateError("");
+    try {
+      await api.createPromptVersion(accountId, {
+        prompt_content: promptContent.trim(),
+        change_log: changeLog.trim() || undefined,
+        activate: activateOnCreate,
+      });
+      setMessage(activateOnCreate ? "新版本已创建并激活" : "新版本已创建，待审核激活");
+      setCreateOpen(false);
+      await loadPrompts();
+    } catch (e) {
+      setCreateError(e instanceof ApiError ? String(e.message) : "创建失败");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -90,6 +129,9 @@ export function PromptsPage() {
       </header>
 
       <div className="toolbar">
+        <button type="button" className="btn btn-primary" onClick={openCreate}>
+          + 创建版本
+        </button>
         <button
           className="btn btn-primary"
           onClick={() => handleEvolve(false)}
@@ -165,6 +207,67 @@ export function PromptsPage() {
           </Card>
         )}
       </div>
+
+      <Modal
+        open={createOpen}
+        title="创建 Prompt 版本"
+        onClose={() => {
+          if (!creating) setCreateOpen(false);
+        }}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              form="prompt-create-form"
+              className="btn btn-primary"
+              disabled={creating}
+            >
+              {creating ? "创建中…" : "创建"}
+            </button>
+          </>
+        }
+      >
+        <form id="prompt-create-form" className="form-stack" onSubmit={handleCreate}>
+          {createError && <ErrorMessage message={createError} />}
+          <FormField label="Prompt 内容 *" htmlFor="prompt-content">
+            <textarea
+              id="prompt-content"
+              rows={10}
+              value={promptContent}
+              onChange={(e) => setPromptContent(e.target.value)}
+              placeholder="输入完整 Prompt 模板…"
+              required
+            />
+          </FormField>
+          <FormField label="变更说明" htmlFor="prompt-changelog">
+            <input
+              id="prompt-changelog"
+              value={changeLog}
+              onChange={(e) => setChangeLog(e.target.value)}
+              placeholder="例如：强化前 3 秒钩子"
+            />
+          </FormField>
+          <FormField label="立即激活" htmlFor="prompt-activate">
+            <label className="checkbox-label">
+              <input
+                id="prompt-activate"
+                type="checkbox"
+                checked={activateOnCreate}
+                onChange={(e) => setActivateOnCreate(e.target.checked)}
+              />
+              <span>创建后立即设为活跃版本（默认需人工审核）</span>
+            </label>
+          </FormField>
+        </form>
+      </Modal>
     </div>
   );
 }

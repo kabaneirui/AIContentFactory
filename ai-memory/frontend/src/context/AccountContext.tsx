@@ -33,7 +33,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const refreshAccounts = useCallback(async () => {
     const list = await api.listAccounts();
     setAccounts(list);
-    if (list.length > 0) {
+    if (list.length === 0) {
+      setAccountIdState(null);
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
       setAccountIdState((prev) => {
         if (prev && list.some((a) => a.id === prev)) return prev;
         return list[0].id;

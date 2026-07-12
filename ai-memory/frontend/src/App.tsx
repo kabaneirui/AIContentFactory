@@ -6,6 +6,8 @@ import { ImportPage } from "./pages/ImportPage";
 import { LearningPage } from "./pages/LearningPage";
 import { PredictPage } from "./pages/PredictPage";
 import { PromptsPage } from "./pages/PromptsPage";
+import { TrendsPage } from "./pages/TrendsPage";
+import { VideoCreatePage } from "./pages/VideoCreatePage";
 import { VideoDetailPage } from "./pages/VideoDetailPage";
 import { VideosPage } from "./pages/VideosPage";
 
@@ -16,7 +18,9 @@ export default function App() {
         <Route index element={<HomePage />} />
         <Route path="decision" element={<DecisionPage />} />
         <Route path="videos" element={<VideosPage />} />
+        <Route path="videos/new" element={<VideoCreatePage />} />
         <Route path="videos/:videoId" element={<VideoDetailPage />} />
+        <Route path="trends" element={<TrendsPage />} />
         <Route path="learning" element={<LearningPage />} />
         <Route path="predict" element={<PredictPage />} />
         <Route path="prompts" element={<PromptsPage />} />

@@ -115,9 +115,16 @@ env_file:
 
 ### 步骤 1：创建账号
 
-**前端**：侧边栏账号下拉框旁，首次进入会自动提示；也可通过 API 创建。
+**前端（推荐）**：
 
-**API**：
+1. 打开 http://localhost:3000（或本地开发 http://localhost:5173）
+2. 左侧「当前账号」区域点击 **+ 创建**
+3. 填写账号名称、选择平台（视频号 / 抖音 / 快手）
+4. 保存后在下拉框中选择该账号
+
+编辑/删除：同一区域点击 **编辑** 或 **删除**（可设置预测拦截阈值、Prompt 自动进化开关）。
+
+**API（备选）**：
 
 ```bash
 curl -X POST http://localhost:8000/accounts \
@@ -227,6 +234,8 @@ docker compose exec -d backend celery -A app.workers.celery_app beat -l info
 
 展示最佳栏目、画面、时长、发布时间、Hook、CTA 等。
 
+点击 **编辑锁定字段** 可勾选不希望被每日学习自动覆盖的画像项（如最佳发布时间、最佳 Hook 等）。
+
 **API**：
 
 ```bash
@@ -252,9 +261,15 @@ curl -X POST http://localhost:8000/accounts/1/decide/today \
   -d '{"season": "夏至", "festival": "", "count": 5}'
 ```
 
-决策逻辑：**70% 账号历史经验** + **30% 全网热点**（可在「热点」模块手动录入）。
+决策逻辑：**70% 账号历史经验** + **30% 全网热点**（可在「热点管理」页录入）。
 
-录入热点：
+**录入热点（前端）**：
+
+1. 侧边栏进入 **热点管理**
+2. 点击 **+ 新建热点**，填写话题、分类、热度、节气/节日
+3. 支持 CSV 批量导入
+
+**API（备选）**：
 
 ```bash
 curl -X POST http://localhost:8000/trends \
@@ -304,7 +319,13 @@ curl -X POST http://localhost:8000/accounts/1/predict \
 
 ### 步骤 7：发布并记录
 
-选定选题、完成拍摄发布后，调用管线钩子写入系统：
+**前端（推荐）**：
+
+1. 进入 **视频记忆** → 点击 **+ 发布视频**
+2. 填写标题、Hook、模板等，可选填发布时间
+3. 发布后进入视频详情页，点击 **编辑表现数据** 更新播放量/完播率
+
+**API（管线钩子，备选）**：
 
 ```bash
 curl -X POST http://localhost:8000/accounts/1/pipeline/publish \
@@ -331,13 +352,7 @@ curl -X POST http://localhost:8000/accounts/1/pipeline/publish \
 
 若希望发布前强制预测通过，设 `"require_prediction_pass": true`。
 
-发布后更新播放数据（手动录入，视频号暂无公开 API）：
-
-```bash
-curl -X PATCH http://localhost:8000/videos/123/performance \
-  -H "Content-Type: application/json" \
-  -d '{"views": 520, "finish_rate": 0.31, "likes": 45}'
-```
+发布后更新播放数据：在 **视频详情页 → 编辑表现数据** 录入即可（无需调 API）。
 
 ---
 
@@ -345,15 +360,16 @@ curl -X PATCH http://localhost:8000/videos/123/performance \
 
 | 页面 | 路径 | 功能 |
 |------|------|------|
-| 账号画像 | `/` | 最佳栏目/画面/时长/Hook 等 |
+| 账号画像 | `/` | 最佳栏目/画面/时长/Hook；**编辑锁定字段** |
 | 决策中心 | `/decision` | 今天发什么 |
-| 视频记忆 | `/videos` | 历史视频列表与生命周期 |
+| 视频记忆 | `/videos` | 列表、**发布视频**（`/videos/new`）、详情 |
+| 热点管理 | `/trends` | 热点 **新建/编辑/删除**、CSV 导入 |
 | 学习报告 | `/learning` | Brain Learning 报告与策略建议 |
 | 预测拦截 | `/predict` | 发布前效果预测 |
-| Prompt 管理 | `/prompts` | 版本对比、进化、激活 |
+| Prompt 管理 | `/prompts` | **创建版本**、进化、激活 |
 | 数据导入 | `/import` | CSV / JSON 批量导入 |
 
-侧边栏可切换多个账号，每个账号数据完全隔离。
+侧边栏 **+ 创建 / 编辑 / 删除** 管理账号；每个账号数据完全隔离。
 
 ---
 
@@ -361,9 +377,10 @@ curl -X PATCH http://localhost:8000/videos/123/performance \
 
 **前端**：http://localhost:3000/prompts
 
+- **+ 创建版本**：手动录入 Prompt 全文与变更说明
 - 查看各版本的视频数、平均播放、推荐分
-- 手动触发进化：`POST /accounts/{id}/prompts/evolve`
-- 审核后激活新版本：`POST /accounts/{id}/prompts/{version_id}/activate`
+- **检查进化 / 强制进化**：自动生成新版本
+- **激活此版本**：切换活跃 Prompt
 
 默认 **半自动模式**（`auto_evolve=false`）：系统生成新版本后需人工确认激活。
 

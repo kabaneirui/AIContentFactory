@@ -38,14 +38,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 import type {
   Account,
+  AccountCreate,
   AccountProfile,
+  AccountUpdate,
   BrainLearning,
   DecideTodayResponse,
+  PerformanceUpdate,
   PredictApiResponse,
+  ProfileUpdate,
   PromptEvolveResponse,
   PromptVersion,
+  PromptVersionCreate,
   PromptVersionListResponse,
+  TrendImportResult,
+  TrendTopic,
+  TrendTopicCreate,
+  TrendTopicListResponse,
+  TrendTopicUpdate,
   Video,
+  VideoCreate,
   VideoImportResult,
   VideoListResponse,
 } from "./types";
@@ -53,14 +64,29 @@ import type {
 export const api = {
   listAccounts: () => request<Account[]>("/accounts"),
 
-  createAccount: (data: { name: string; platform: string }) =>
+  createAccount: (data: AccountCreate) =>
     request<Account>("/accounts", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
+  updateAccount: (id: number, data: AccountUpdate) =>
+    request<Account>(`/accounts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteAccount: (id: number) =>
+    request<void>(`/accounts/${id}`, { method: "DELETE" }),
+
   getProfile: (accountId: number) =>
     request<AccountProfile>(`/accounts/${accountId}/profile`),
+
+  updateProfile: (accountId: number, data: ProfileUpdate) =>
+    request<AccountProfile>(`/accounts/${accountId}/profile`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 
   getLatestLearning: (accountId: number) =>
     request<BrainLearning>(`/accounts/${accountId}/learning/latest`),
@@ -89,6 +115,18 @@ export const api = {
   },
 
   getVideo: (videoId: number) => request<Video>(`/videos/${videoId}`),
+
+  createVideo: (accountId: number, data: VideoCreate) =>
+    request<Video>(`/accounts/${accountId}/videos`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateVideoPerformance: (videoId: number, data: PerformanceUpdate) =>
+    request<Video>(`/videos/${videoId}/performance`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 
   predict: (
     accountId: number,
@@ -125,6 +163,66 @@ export const api = {
       `/accounts/${accountId}/prompts/${versionId}/activate`,
       { method: "POST" },
     ),
+
+  createPromptVersion: (accountId: number, data: PromptVersionCreate) =>
+    request<PromptVersion>(`/accounts/${accountId}/prompts`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  listTrends: (
+    params: {
+      category?: string;
+      season?: string;
+      festival?: string;
+      source?: string;
+      date_from?: string;
+      date_to?: string;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ) => {
+    const query = new URLSearchParams();
+    if (params.category) query.set("category", params.category);
+    if (params.season) query.set("season", params.season);
+    if (params.festival) query.set("festival", params.festival);
+    if (params.source) query.set("source", params.source);
+    if (params.date_from) query.set("date_from", params.date_from);
+    if (params.date_to) query.set("date_to", params.date_to);
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.offset) query.set("offset", String(params.offset));
+    const qs = query.toString();
+    return request<TrendTopicListResponse>(`/trends${qs ? `?${qs}` : ""}`);
+  },
+
+  createTrend: (data: TrendTopicCreate) =>
+    request<TrendTopic>("/trends", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateTrend: (id: number, data: TrendTopicUpdate) =>
+    request<TrendTopic>(`/trends/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteTrend: (id: number) =>
+    request<void>(`/trends/${id}`, { method: "DELETE" }),
+
+  importTrendsCsv: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch(`${API_BASE}/trends/import/csv`, {
+      method: "POST",
+      body: form,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new ApiError(body.detail ?? response.statusText, response.status);
+    }
+    return response.json() as Promise<TrendImportResult>;
+  },
 
   importVideosJson: (
     accountId: number,
