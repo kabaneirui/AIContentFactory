@@ -26,7 +26,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountIdState] = useState<number | null>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? Number(stored) : null;
+    if (!stored) return null;
+    const parsed = Number(stored);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   });
   const [loading, setLoading] = useState(true);
 
@@ -38,8 +40,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(STORAGE_KEY);
     } else {
       setAccountIdState((prev) => {
-        if (prev && list.some((a) => a.id === prev)) return prev;
-        return list[0].id;
+        const next =
+          prev && list.some((a) => a.id === prev) ? prev : list[0].id;
+        localStorage.setItem(STORAGE_KEY, String(next));
+        return next;
       });
     }
   }, []);

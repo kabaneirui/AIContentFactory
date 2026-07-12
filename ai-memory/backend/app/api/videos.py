@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -19,6 +20,36 @@ from app.services.dna_tagger import DnaTaggingError
 from app.services.dna_trigger import schedule_video_tagging, schedule_videos_tagging
 
 router = APIRouter(tags=["videos"])
+
+
+async def _commit_import_result(
+    db: AsyncSession,
+    account: Account,
+    result: VideoImportResult,
+) -> VideoImportResult:
+    """Persist import rows before scheduling background DNA tagging."""
+    if result.imported <= 0:
+        return result
+
+    await db.commit()
+
+    found = await db.scalar(
+        select(func.count())
+        .select_from(ContentMemory)
+        .where(
+            ContentMemory.account_id == account.id,
+            ContentMemory.id.in_(result.video_ids),
+        )
+    )
+    if found != len(result.video_ids):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                f"Import commit verification failed: expected {len(result.video_ids)} "
+                f"videos for account {account.id}, found {found or 0}"
+            ),
+        )
+    return result
 
 
 def _collect_dna_filters(
@@ -120,6 +151,7 @@ async def import_videos_json(
     db: AsyncSession = Depends(get_db),
 ) -> VideoImportResult:
     result = await video_import_service.import_videos_json(db, account, payload)
+    result = await _commit_import_result(db, account, result)
     if result.video_ids:
         background_tasks.add_task(schedule_videos_tagging, result.video_ids)
     return result
@@ -154,6 +186,7 @@ async def import_videos_csv(
     result = await video_import_service.import_videos_from_parsed_rows(
         db, account, raw_rows
     )
+    result = await _commit_import_result(db, account, result)
     if result.video_ids:
         background_tasks.add_task(schedule_videos_tagging, result.video_ids)
     return result

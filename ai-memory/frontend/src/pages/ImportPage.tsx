@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { VideoImportResult } from "../api/types";
 import { useAccount } from "../context/AccountContext";
 import { Card, ErrorMessage } from "../components/ui";
 
 export function ImportPage() {
-  const { accountId } = useAccount();
+  const { accountId, currentAccount } = useAccount();
   const fileRef = useRef<HTMLInputElement>(null);
   const [jsonText, setJsonText] = useState("");
   const [result, setResult] = useState<VideoImportResult | null>(null);
@@ -13,7 +14,10 @@ export function ImportPage() {
   const [error, setError] = useState("");
 
   const handleCsvUpload = async (file: File) => {
-    if (!accountId) return;
+    if (!accountId) {
+      setError("请先在侧边栏选择或创建账号");
+      return;
+    }
     setLoading(true);
     setError("");
     setResult(null);
@@ -28,7 +32,11 @@ export function ImportPage() {
   };
 
   const handleJsonImport = async () => {
-    if (!accountId || !jsonText.trim()) return;
+    if (!accountId) {
+      setError("请先在侧边栏选择或创建账号");
+      return;
+    }
+    if (!jsonText.trim()) return;
     setLoading(true);
     setError("");
     setResult(null);
@@ -51,7 +59,15 @@ export function ImportPage() {
     <div className="page">
       <header className="page-header">
         <h1>数据导入</h1>
-        <p className="page-sub">批量导入历史视频数据（CSV / JSON）</p>
+        <p className="page-sub">
+          批量导入历史视频数据（CSV / JSON）
+          {currentAccount && (
+            <>
+              {" "}
+              · 当前账号：<strong>{currentAccount.name}</strong>（ID: {accountId}）
+            </>
+          )}
+        </p>
       </header>
 
       <div className="grid-2">
@@ -100,6 +116,19 @@ export function ImportPage() {
               <span className="result-err">错误 {result.errors.length} 条</span>
             )}
           </div>
+          {result.imported > 0 && accountId && (
+            <p className="hint">
+              已写入账号 ID {accountId}。
+              {result.video_ids.length > 0 && (
+                <> 视频 ID：{result.video_ids.join(", ")}。</>
+              )}
+              {" "}
+              <Link to="/videos" className="link">
+                前往视频记忆查看
+              </Link>
+              （请确认侧边栏仍是同一账号，状态筛选选「全部状态」）
+            </p>
+          )}
           {result.errors.length > 0 && (
             <ul className="error-list">
               {result.errors.map((err, i) => (

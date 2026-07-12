@@ -6,7 +6,7 @@ import { useAccount } from "../context/AccountContext";
 import { Card, ErrorMessage, LifecycleBadge, Loading } from "../components/ui";
 
 export function VideosPage() {
-  const { accountId } = useAccount();
+  const { accountId, currentAccount } = useAccount();
   const [videos, setVideos] = useState<Video[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -37,7 +37,15 @@ export function VideosPage() {
     <div className="page">
       <header className="page-header">
         <h1>视频记忆</h1>
-        <p className="page-sub">共 {total} 条视频 · 生命周期追踪</p>
+        <p className="page-sub">
+          共 {total} 条视频 · 生命周期追踪
+          {currentAccount && (
+            <>
+              {" "}
+              · 账号 {currentAccount.name}（ID: {accountId}）
+            </>
+          )}
+        </p>
       </header>
 
       <div className="toolbar">
@@ -67,6 +75,11 @@ export function VideosPage() {
       ) : videos.length === 0 ? (
         <Card title="暂无视频">
           <p>请通过数据导入页上传历史视频，或点击「发布视频」录入新内容。</p>
+          {statusFilter && (
+            <p className="hint">
+              当前筛选状态为「{statusFilter}」。历史导入视频多为「同步中」，请改选「全部状态」。
+            </p>
+          )}
         </Card>
       ) : (
         <>
