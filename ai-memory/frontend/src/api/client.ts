@@ -53,6 +53,8 @@ import type {
   PromptVersion,
   PromptVersionCreate,
   PromptVersionListResponse,
+  SyncLogListResponse,
+  SyncTriggerResponse,
   TrendImportResult,
   TrendTopic,
   TrendTopicCreate,
@@ -62,6 +64,7 @@ import type {
   VideoCreate,
   VideoImportResult,
   VideoListResponse,
+  VideoMetadataUpdate,
 } from "./types";
 
 export const api = {
@@ -130,6 +133,20 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+
+  updateVideoMetadata: (videoId: number, data: VideoMetadataUpdate) =>
+    request<Video>(`/videos/${videoId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  syncVideoPerformance: (videoId: number) =>
+    request<SyncTriggerResponse>(`/videos/${videoId}/sync`, {
+      method: "POST",
+    }),
+
+  listVideoSyncLogs: (videoId: number, limit = 10) =>
+    request<SyncLogListResponse>(`/videos/${videoId}/sync-logs?limit=${limit}`),
 
   predict: (
     accountId: number,

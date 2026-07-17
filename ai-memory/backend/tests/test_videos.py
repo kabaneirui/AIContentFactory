@@ -138,6 +138,28 @@ async def test_update_video_performance(client: AsyncClient, account_id: int):
 
 
 @pytest.mark.asyncio
+async def test_update_video_metadata_sets_platform_video_id(
+    client: AsyncClient, account_id: int
+):
+    create_resp = await client.post(
+        f"/accounts/{account_id}/videos",
+        json={"title": "补填BV号测试"},
+    )
+    video_id = create_resp.json()["id"]
+    assert create_resp.json()["platform_video_id"] is None
+
+    response = await client.patch(
+        f"/videos/{video_id}",
+        json={"platform_video_id": "BV1xx4y1x7xx"},
+    )
+    assert response.status_code == 200
+    assert response.json()["platform_video_id"] == "BV1xx4y1x7xx"
+
+    detail = await client.get(f"/videos/{video_id}")
+    assert detail.json()["platform_video_id"] == "BV1xx4y1x7xx"
+
+
+@pytest.mark.asyncio
 async def test_import_videos_json(client: AsyncClient, account_id: int):
     response = await client.post(
         f"/accounts/{account_id}/videos/import",

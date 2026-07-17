@@ -13,6 +13,7 @@ from app.schemas.video import (
     VideoImportRequest,
     VideoImportResult,
     VideoListResponse,
+    VideoMetadataUpdate,
     VideoResponse,
 )
 from app.services import dna_tagger, video_import_service, video_service
@@ -219,6 +220,19 @@ async def batch_tag_videos(
 @router.get("/videos/{video_id}", response_model=VideoResponse)
 async def get_video(video: ContentMemory = Depends(get_video)) -> ContentMemory:
     return video
+
+
+@router.patch("/videos/{video_id}", response_model=VideoResponse)
+async def update_video_metadata(
+    payload: VideoMetadataUpdate,
+    video: ContentMemory = Depends(get_video),
+    db: AsyncSession = Depends(get_db),
+) -> ContentMemory:
+    """补充/修正视频的平台元数据，如 B站 BV 号，便于后续自动同步数据。"""
+    await video_service.update_metadata(db, video, payload)
+    refreshed = await video_service.get_video_by_id(db, video.id)
+    assert refreshed is not None
+    return refreshed
 
 
 @router.post("/videos/{video_id}/retag", response_model=RetagResponse)

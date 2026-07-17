@@ -108,6 +108,7 @@ export interface Video {
   id: number;
   account_id: number;
   platform: string;
+  platform_video_id: string | null;
   title: string;
   hook: string | null;
   template: string | null;
@@ -121,6 +122,32 @@ export interface Video {
   lifecycle_status: string;
   created_at: string;
   performance: VideoPerformance | null;
+}
+
+export interface VideoMetadataUpdate {
+  platform_video_id?: string | null;
+}
+
+export interface SyncLogEntry {
+  id: number;
+  content_memory_id: number;
+  account_id: number;
+  adapter: string;
+  checkpoint: string | null;
+  status: "success" | "no_data" | "failed" | "skipped";
+  error: string | null;
+  synced_at: string;
+}
+
+export interface SyncTriggerResponse {
+  video_id: number;
+  sync_log: SyncLogEntry;
+  performance_updated: boolean;
+}
+
+export interface SyncLogListResponse {
+  items: SyncLogEntry[];
+  total: number;
 }
 
 export interface VideoListResponse {

@@ -17,6 +17,7 @@ export function VideoCreatePage() {
   const [duration, setDuration] = useState("");
   const [cta, setCta] = useState("");
   const [category, setCategory] = useState("");
+  const [platformVideoId, setPlatformVideoId] = useState("");
   const [publishTime, setPublishTime] = useState("");
   const [script, setScript] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -38,6 +39,7 @@ export function VideoCreatePage() {
       if (sceneStyle.trim()) payload.scene_style = sceneStyle.trim();
       if (cta.trim()) payload.cta = cta.trim();
       if (category.trim()) payload.category = category.trim();
+      if (platformVideoId.trim()) payload.platform_video_id = platformVideoId.trim();
       if (script.trim()) payload.script = script.trim();
       if (duration.trim()) payload.duration = Number(duration);
       if (publishTime) {
@@ -155,6 +157,15 @@ export function VideoCreatePage() {
               />
             </FormField>
           </div>
+
+          <FormField label="平台视频ID（如 B站 BV号）" htmlFor="video-platform-id">
+            <input
+              id="video-platform-id"
+              value={platformVideoId}
+              onChange={(e) => setPlatformVideoId(e.target.value)}
+              placeholder="例如：BV1xx4y1x7xx（填写后可在详情页一键同步播放数据）"
+            />
+          </FormField>
 
           <FormField label="口播稿" htmlFor="video-script">
             <textarea

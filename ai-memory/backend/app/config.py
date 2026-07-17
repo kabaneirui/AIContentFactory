@@ -31,7 +31,9 @@ class Settings(BaseSettings):
     wechat_channels_access_token: str | None = None
     wechat_channels_timeout_seconds: float = 30.0
 
-    bilibili_enabled: bool = False
+    # 播放量等基础数据走 B站公开接口，无需 app_key/secret；
+    # 仅创作者中心相关能力（如批量拉取稿件列表）才需要开放平台凭证。
+    bilibili_enabled: bool = True
     bilibili_app_key: str | None = None
     bilibili_app_secret: str | None = None
     bilibili_access_token: str | None = None

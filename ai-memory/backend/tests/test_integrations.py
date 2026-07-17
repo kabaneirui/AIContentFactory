@@ -118,13 +118,47 @@ async def test_bilibili_adapter_requires_credentials():
 
 
 @pytest.mark.asyncio
-async def test_registry_defaults_bilibili_to_manual(db_session: AsyncSession):
+async def test_registry_bilibili_adapter_when_enabled(db_session: AsyncSession):
+    from app.config import Settings
+
     account = Account(name="B站号", platform="bilibili")
     db_session.add(account)
     await db_session.flush()
 
-    adapter = get_adapter_for_account(account, db_session)
+    settings = Settings(bilibili_enabled=True)
+    adapter = get_adapter_for_account(account, db_session, settings=settings)
+    assert adapter.adapter_name == "bilibili"
+
+
+@pytest.mark.asyncio
+async def test_registry_bilibili_falls_back_to_manual_when_disabled(
+    db_session: AsyncSession,
+):
+    from app.config import Settings
+
+    account = Account(name="B站号停用", platform="bilibili")
+    db_session.add(account)
+    await db_session.flush()
+
+    settings = Settings(bilibili_enabled=False)
+    adapter = get_adapter_for_account(account, db_session, settings=settings)
     assert adapter.adapter_name == "manual"
+
+
+@pytest.mark.asyncio
+async def test_bilibili_fetch_performance_without_bvid_returns_none():
+    adapter = BilibiliAdapter(app_key=None, app_secret=None)
+    result = await adapter.fetch_performance(
+        account_id=1, video_id=1, platform_video_id=None
+    )
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_bilibili_list_videos_requires_credentials():
+    adapter = BilibiliAdapter(app_key=None, app_secret=None)
+    with pytest.raises(AdapterNotConfiguredError):
+        await adapter.list_videos(account_id=1)
 
 
 @pytest.mark.asyncio

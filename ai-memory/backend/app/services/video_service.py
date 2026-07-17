@@ -11,7 +11,7 @@ from app.models.performance_sync_task import (
     SyncCheckpoint,
     SyncTaskStatus,
 )
-from app.schemas.video import PerformanceUpdate, VideoCreate
+from app.schemas.video import PerformanceUpdate, VideoCreate, VideoMetadataUpdate
 from app.services import lifecycle as lifecycle_service
 
 
@@ -177,6 +177,20 @@ async def update_performance(
     await db.flush()
     await db.refresh(performance)
     return performance
+
+
+async def update_metadata(
+    db: AsyncSession,
+    video: ContentMemory,
+    payload: VideoMetadataUpdate,
+) -> ContentMemory:
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(video, field, value.strip() if isinstance(value, str) else value)
+
+    await db.flush()
+    await db.refresh(video)
+    return video
 
 
 def _dna_tag_filters(dna_filters: dict[str, str]) -> list[Any]:

@@ -405,14 +405,20 @@ curl -X POST http://localhost:8000/accounts/1/pipeline/publish \
 
 ### Q：视频号 / B站数据怎么同步？
 
-当前版本默认是**手动导入 + 后台录入**。发布后在「视频记忆」详情页更新播放数据，或调用 `PATCH /videos/{id}/performance`。
+**B站（推荐，已支持自动获取）**：
 
-平台适配器已预留：
+1. 发布/导入视频时填写「平台视频ID」为该视频的 BV 号（如 `BV1xx4y1x7xx`），也可以在视频详情页补填。
+2. 在视频详情页点击「同步数据」按钮，即会调用 B站公开接口自动拉取播放量、点赞、评论、分享、收藏，无需任何 API Key。
+3. 该功能默认开启（`.env` 中 `BILIBILI_ENABLED=true`）。若需关闭改为纯手动模式，设为 `false`。
+
+**其他平台 / B站创作者中心高级能力**：当前仍是**手动导入 + 后台录入**。发布后在「视频记忆」详情页更新播放数据，或调用 `PATCH /videos/{id}/performance`。
+
+平台适配器开关：
 
 | 平台 | `.env` 开关 | 说明 |
 |------|-------------|------|
 | 视频号 | `WECHAT_CHANNELS_ENABLED` | 需 AppID/Secret |
-| B站 | `BILIBILI_ENABLED` | 需 AppKey/Secret + AccessToken |
+| B站 | `BILIBILI_ENABLED` | 默认开启，公开数据无需凭证；AppKey/Secret/AccessToken 仅用于未来的创作者中心稿件列表等授权接口 |
 
 未开启时统一走手动模式。抖音 / 快手目前仅作账号标签，自动同步尚未接入。
 

@@ -63,6 +63,12 @@ class VideoImportResult(BaseModel):
     video_ids: list[int] = Field(default_factory=list)
 
 
+class VideoMetadataUpdate(BaseModel):
+    """用于补充/修正视频的平台元数据，如 B站 BV 号。"""
+
+    platform_video_id: str | None = Field(default=None, max_length=255)
+
+
 class PerformanceUpdate(BaseModel):
     views: int | None = Field(default=None, ge=0)
     ctr: float | None = Field(default=None, ge=0)

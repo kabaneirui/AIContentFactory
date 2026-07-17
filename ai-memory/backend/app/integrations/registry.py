@@ -35,12 +35,8 @@ def get_adapter_for_account(
             timeout_seconds=cfg.wechat_channels_timeout_seconds,
         )
 
-    if (
-        account.platform == BILIBILI_PLATFORM
-        and cfg.bilibili_enabled
-        and cfg.bilibili_app_key
-        and cfg.bilibili_app_secret
-    ):
+    if account.platform == BILIBILI_PLATFORM and cfg.bilibili_enabled:
+        # 公开播放量数据无需凭证；app_key/secret 只用于需要授权的创作者接口。
         return BilibiliAdapter(
             app_key=cfg.bilibili_app_key,
             app_secret=cfg.bilibili_app_secret,

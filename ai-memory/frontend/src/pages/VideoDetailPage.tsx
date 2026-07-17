@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
-import type { PerformanceUpdate, Video } from "../api/types";
+import type { PerformanceUpdate, SyncTriggerResponse, Video } from "../api/types";
 import { Card, ErrorMessage, FormField, LifecycleBadge, Loading } from "../components/ui";
+
+const SYNC_STATUS_LABEL: Record<string, string> = {
+  success: "同步成功",
+  no_data: "暂无公开数据（请检查 BV 号是否正确）",
+  failed: "同步失败",
+  skipped: "已跳过",
+};
 
 const LIFECYCLE_STEPS = [
   "created",
@@ -40,6 +47,15 @@ export function VideoDetailPage() {
   const [collects, setCollects] = useState("");
   const [savingPerformance, setSavingPerformance] = useState(false);
   const [performanceError, setPerformanceError] = useState("");
+
+  const [editingPlatformId, setEditingPlatformId] = useState(false);
+  const [platformVideoId, setPlatformVideoId] = useState("");
+  const [savingPlatformId, setSavingPlatformId] = useState(false);
+  const [platformIdError, setPlatformIdError] = useState("");
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncTriggerResponse | null>(null);
+  const [syncError, setSyncError] = useState("");
 
   const loadVideo = async (id: number) => {
     const data = await api.getVideo(id);
@@ -94,6 +110,49 @@ export function VideoDetailPage() {
     }
   };
 
+  const startEditPlatformId = () => {
+    if (!video) return;
+    setPlatformVideoId(video.platform_video_id ?? "");
+    setPlatformIdError("");
+    setEditingPlatformId(true);
+  };
+
+  const handleSavePlatformId = async () => {
+    if (!videoId) return;
+    setSavingPlatformId(true);
+    setPlatformIdError("");
+    try {
+      const updated = await api.updateVideoMetadata(Number(videoId), {
+        platform_video_id: platformVideoId.trim() || null,
+      });
+      setVideo(updated);
+      setEditingPlatformId(false);
+    } catch (e) {
+      setPlatformIdError(e instanceof ApiError ? String(e.message) : "保存失败");
+    } finally {
+      setSavingPlatformId(false);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!videoId) return;
+    setSyncing(true);
+    setSyncError("");
+    setSyncResult(null);
+    try {
+      const result = await api.syncVideoPerformance(Number(videoId));
+      setSyncResult(result);
+      if (result.performance_updated) {
+        const refreshed = await loadVideo(Number(videoId));
+        setVideo(refreshed);
+      }
+    } catch (e) {
+      setSyncError(e instanceof ApiError ? String(e.message) : "同步失败");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!video) return <ErrorMessage message="视频不存在" />;
@@ -142,6 +201,42 @@ export function VideoDetailPage() {
             <dd>{video.duration ? `${video.duration}s` : "—"}</dd>
             <dt>Prompt 版本</dt>
             <dd>{video.prompt ?? "—"}</dd>
+            <dt>平台视频ID（BV号）</dt>
+            <dd>
+              {!editingPlatformId ? (
+                <>
+                  {video.platform_video_id ?? "—"}{" "}
+                  <button type="button" className="btn btn-sm" onClick={startEditPlatformId}>
+                    编辑
+                  </button>
+                </>
+              ) : (
+                <span className="inline-edit">
+                  {platformIdError && <ErrorMessage message={platformIdError} />}
+                  <input
+                    value={platformVideoId}
+                    onChange={(e) => setPlatformVideoId(e.target.value)}
+                    placeholder="例如：BV1xx4y1x7xx"
+                  />
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setEditingPlatformId(false)}
+                    disabled={savingPlatformId}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={handleSavePlatformId}
+                    disabled={savingPlatformId}
+                  >
+                    {savingPlatformId ? "保存中…" : "保存"}
+                  </button>
+                </span>
+              )}
+            </dd>
           </dl>
         </Card>
 
@@ -175,11 +270,35 @@ export function VideoDetailPage() {
                   <dd>{video.performance.collects}</dd>
                 </dl>
               ) : (
-                <p>暂无表现数据，点击下方编辑录入。</p>
+                <p>暂无表现数据，点击下方编辑录入，或使用「同步数据」自动获取。</p>
               )}
-              <button type="button" className="btn btn-sm" onClick={startEditPerformance}>
-                编辑表现数据
-              </button>
+              <div className="form-actions form-actions-start">
+                <button type="button" className="btn btn-sm" onClick={startEditPerformance}>
+                  编辑表现数据
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={handleSync}
+                  disabled={syncing}
+                  title={
+                    video.platform_video_id
+                      ? "从平台公开接口拉取最新播放数据"
+                      : "请先填写平台视频ID（如 BV 号）"
+                  }
+                >
+                  {syncing ? "同步中…" : "同步数据"}
+                </button>
+              </div>
+              {syncError && <ErrorMessage message={syncError} />}
+              {syncResult && (
+                <p className={`hint sync-hint-${syncResult.sync_log.status}`}>
+                  {SYNC_STATUS_LABEL[syncResult.sync_log.status] ?? syncResult.sync_log.status}
+                  {syncResult.sync_log.error ? `：${syncResult.sync_log.error}` : ""}
+                  {" · "}
+                  {new Date(syncResult.sync_log.synced_at).toLocaleString()}
+                </p>
+              )}
             </>
           ) : (
             <form

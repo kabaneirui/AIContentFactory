@@ -1,10 +1,14 @@
-"""Bilibili (B站) adapter skeleton.
+"""Bilibili (B站) adapter.
 
-Creator data APIs require 哔哩哔哩开放平台 credentials (app key / secret)
-and authorized scopes for video analytics. Ordinary BV links do not expose
-full creator metrics without the open platform.
+`fetch_performance` uses B站的公开稿件详情接口
+(``/x/web-interface/view``)，该接口无需任何登录凭证即可拿到
+播放/点赞/评论/转发/收藏等公开数据，只需要视频的 BV 号
+（写入 ``platform_video_id`` 字段）。
 
-See: https://openhome.bilibili.com/doc
+`list_videos`（批量拉取账号稿件列表）依赖创作者中心的授权接口，
+仍需要 哔哩哔哩开放平台 的 app key / secret / access token，
+见 https://openhome.bilibili.com/doc 。未配置时会直接报错，
+调用方应回退到手动导入。
 """
 
 from __future__ import annotations
@@ -26,9 +30,18 @@ logger = logging.getLogger(__name__)
 BILIBILI_API_BASE = "https://member.bilibili.com"
 BILIBILI_OPEN_API_BASE = "https://api.bilibili.com"
 
+# B站公开接口会拒绝没有 User-Agent 的请求。
+_PUBLIC_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Referer": "https://www.bilibili.com",
+}
+
 
 class BilibiliAdapter(PlatformAdapter):
-    """Skeleton adapter for B站开放平台 / 创作中心数据接口."""
+    """B站适配器：公开播放数据 + （可选）创作者中心稿件列表。"""
 
     def __init__(
         self,
@@ -50,10 +63,64 @@ class BilibiliAdapter(PlatformAdapter):
     def _ensure_configured(self) -> None:
         if not self._app_key or not self._app_secret:
             raise AdapterNotConfiguredError(
-                "Bilibili adapter requires BILIBILI_APP_KEY and "
-                "BILIBILI_APP_SECRET. Official creator APIs also need the "
-                "account to authorize the corresponding open-platform scopes."
+                "该功能需要 BILIBILI_APP_KEY / BILIBILI_APP_SECRET（哔哩哔哩开放平台凭证），"
+                "播放量等公开数据同步无需此配置。"
             )
+
+    async def fetch_performance(
+        self,
+        *,
+        account_id: int,
+        video_id: int,
+        platform_video_id: str | None,
+    ) -> PerformanceSnapshot | None:
+        """通过公开接口拉取稿件的播放/点赞/评论/分享/收藏数据（无需凭证）。"""
+        if not platform_video_id:
+            logger.info(
+                "BilibiliAdapter: video %s has no platform_video_id (BV号)，跳过同步",
+                video_id,
+            )
+            return None
+
+        bvid = platform_video_id.strip()
+        params: dict[str, str] = (
+            {"bvid": bvid} if bvid.upper().startswith("BV") else {"aid": bvid}
+        )
+
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            response = await client.get(
+                f"{BILIBILI_OPEN_API_BASE}/x/web-interface/view",
+                params=params,
+                headers=_PUBLIC_HEADERS,
+            )
+            if response.status_code == 404:
+                logger.info(
+                    "BilibiliAdapter: video %s (bv=%s) not found on Bilibili",
+                    video_id,
+                    bvid,
+                )
+                return None
+            response.raise_for_status()
+            payload = response.json()
+
+        if payload.get("code", 0) != 0:
+            logger.warning(
+                "BilibiliAdapter API error for video %s (bv=%s): %s",
+                video_id,
+                bvid,
+                payload.get("message") or payload.get("msg") or "unknown",
+            )
+            return None
+
+        data = payload.get("data") or {}
+        stat = data.get("stat") or {}
+        return PerformanceSnapshot(
+            views=int(stat.get("view") or 0),
+            likes=int(stat.get("like") or 0),
+            comments=int(stat.get("reply") or 0),
+            shares=int(stat.get("share") or 0),
+            collects=int(stat.get("favorite") or 0),
+        )
 
     async def _resolve_access_token(self) -> str:
         if self._access_token:
@@ -66,62 +133,6 @@ class BilibiliAdapter(PlatformAdapter):
             "Set BILIBILI_ACCESS_TOKEN after authorizing the creator account."
         )
 
-    async def fetch_performance(
-        self,
-        *,
-        account_id: int,
-        video_id: int,
-        platform_video_id: str | None,
-    ) -> PerformanceSnapshot | None:
-        """Fetch B站稿件数据（骨架：需开放平台权限后对接真实接口）。"""
-        self._ensure_configured()
-        if not platform_video_id:
-            logger.warning(
-                "BilibiliAdapter: video %s has no platform_video_id (bvid/aid)", video_id
-            )
-            return None
-
-        token = await self._resolve_access_token()
-        # Placeholder endpoint — replace with the authorized analytics API.
-        url = f"{BILIBILI_OPEN_API_BASE}/x/web-interface/view"
-        params = {"bvid": platform_video_id} if platform_video_id.startswith("BV") else {
-            "aid": platform_video_id
-        }
-        headers = {"Authorization": f"Bearer {token}"}
-
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.get(url, params=params, headers=headers)
-            if response.status_code in {401, 403, 404}:
-                logger.info(
-                    "BilibiliAdapter: stats unavailable (%s) for account %s; "
-                    "fall back to manual import",
-                    response.status_code,
-                    account_id,
-                )
-                return None
-            response.raise_for_status()
-            payload = response.json()
-
-        if payload.get("code", 0) != 0:
-            logger.warning(
-                "BilibiliAdapter API error for video %s: %s",
-                video_id,
-                payload.get("message") or payload.get("msg") or "unknown",
-            )
-            return None
-
-        data = payload.get("data") or {}
-        stat = data.get("stat") or data.get("stats") or {}
-        return PerformanceSnapshot(
-            views=int(stat.get("view") or stat.get("views") or 0),
-            likes=int(stat.get("like") or stat.get("likes") or 0),
-            comments=int(stat.get("reply") or stat.get("comments") or 0),
-            shares=int(stat.get("share") or stat.get("shares") or 0),
-            collects=int(stat.get("favorite") or stat.get("collects") or 0),
-            finish_rate=_optional_float(stat.get("finish_rate")),
-            average_watch=_optional_float(stat.get("avg_play_time")),
-        )
-
     async def list_videos(
         self,
         *,
@@ -129,7 +140,7 @@ class BilibiliAdapter(PlatformAdapter):
         since: datetime | None = None,
         limit: int = 100,
     ) -> list[PlatformVideoItem]:
-        """List recent uploads (stub — requires creator archive list API access)."""
+        """List recent uploads (requires creator archive list API access)."""
         self._ensure_configured()
         token = await self._resolve_access_token()
         url = f"{BILIBILI_API_BASE}/x/web/archives"
@@ -178,15 +189,6 @@ class BilibiliAdapter(PlatformAdapter):
                 )
             )
         return items[:limit]
-
-
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def _optional_datetime(value: object) -> datetime | None:
