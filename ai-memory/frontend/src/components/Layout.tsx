@@ -19,6 +19,7 @@ const PLATFORMS = [
   { value: "wechat_channels", label: "视频号" },
   { value: "douyin", label: "抖音" },
   { value: "kuaishou", label: "快手" },
+  { value: "bilibili", label: "B站" },
 ];
 
 type ModalMode = "create" | "edit" | null;

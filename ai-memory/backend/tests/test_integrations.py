@@ -8,6 +8,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.base import AdapterNotConfiguredError, PerformanceSnapshot
+from app.integrations.bilibili import BilibiliAdapter
 from app.integrations.manual import ManualAdapter
 from app.integrations.registry import get_adapter_for_account
 from app.integrations.wechat_channels import WechatChannelsAdapter
@@ -107,6 +108,33 @@ async def test_wechat_adapter_requires_credentials():
     adapter = WechatChannelsAdapter(app_id=None, app_secret=None)
     with pytest.raises(AdapterNotConfiguredError):
         adapter._ensure_configured()
+
+
+@pytest.mark.asyncio
+async def test_bilibili_adapter_requires_credentials():
+    adapter = BilibiliAdapter(app_key=None, app_secret=None)
+    with pytest.raises(AdapterNotConfiguredError):
+        adapter._ensure_configured()
+
+
+@pytest.mark.asyncio
+async def test_registry_defaults_bilibili_to_manual(db_session: AsyncSession):
+    account = Account(name="B站号", platform="bilibili")
+    db_session.add(account)
+    await db_session.flush()
+
+    adapter = get_adapter_for_account(account, db_session)
+    assert adapter.adapter_name == "manual"
+
+
+@pytest.mark.asyncio
+async def test_create_bilibili_account(client: AsyncClient):
+    response = await client.post(
+        "/accounts",
+        json={"name": "B站知识号", "platform": "bilibili"},
+    )
+    assert response.status_code == 201
+    assert response.json()["platform"] == "bilibili"
 
 
 @pytest.mark.asyncio

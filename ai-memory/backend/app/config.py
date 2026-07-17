@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     wechat_channels_access_token: str | None = None
     wechat_channels_timeout_seconds: float = 30.0
 
+    bilibili_enabled: bool = False
+    bilibili_app_key: str | None = None
+    bilibili_app_secret: str | None = None
+    bilibili_access_token: str | None = None
+    bilibili_timeout_seconds: float = 30.0
+
 
 @lru_cache
 def get_settings() -> Settings:

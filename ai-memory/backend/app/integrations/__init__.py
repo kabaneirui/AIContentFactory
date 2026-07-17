@@ -7,6 +7,7 @@ from app.integrations.base import (
     PlatformAdapter,
     PlatformVideoItem,
 )
+from app.integrations.bilibili import BilibiliAdapter
 from app.integrations.manual import ManualAdapter
 from app.integrations.registry import get_adapter_for_account
 from app.integrations.wechat_channels import WechatChannelsAdapter
@@ -14,6 +15,7 @@ from app.integrations.wechat_channels import WechatChannelsAdapter
 __all__ = [
     "AdapterError",
     "AdapterNotConfiguredError",
+    "BilibiliAdapter",
     "ManualAdapter",
     "PerformanceSnapshot",
     "PlatformAdapter",
