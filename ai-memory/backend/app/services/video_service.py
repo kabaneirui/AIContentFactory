@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,9 @@ from app.models.performance_sync_task import (
 )
 from app.schemas.video import PerformanceUpdate, VideoCreate, VideoMetadataUpdate
 from app.services import lifecycle as lifecycle_service
+
+VideoSortBy = Literal["created_at", "publish_time", "views", "title"]
+VideoSortOrder = Literal["asc", "desc"]
 
 
 CHECKPOINT_DELAYS: dict[SyncCheckpoint, timedelta] = {
@@ -117,6 +120,8 @@ async def list_videos(
     template: str | None = None,
     keyword: str | None = None,
     dna_filters: dict[str, str] | None = None,
+    sort_by: VideoSortBy = "publish_time",
+    sort_order: VideoSortOrder = "desc",
 ) -> tuple[list[ContentMemory], int]:
     filters = [ContentMemory.account_id == account_id]
 
@@ -139,12 +144,42 @@ async def list_videos(
         select(ContentMemory)
         .options(selectinload(ContentMemory.performance))
         .where(*filters)
-        .order_by(ContentMemory.created_at.desc())
+    )
+    if sort_by == "views":
+        stmt = stmt.outerjoin(
+            ContentPerformance,
+            ContentPerformance.content_memory_id == ContentMemory.id,
+        )
+        sort_column = func.coalesce(ContentPerformance.views, 0)
+        order_expr = sort_column.asc() if sort_order == "asc" else sort_column.desc()
+    elif sort_by == "publish_time":
+        sort_column = ContentMemory.publish_time
+        # 无发布时间的视频一律沉底，避免草稿/未填时间挤在最前。
+        order_expr = (
+            sort_column.asc().nulls_last()
+            if sort_order == "asc"
+            else sort_column.desc().nulls_last()
+        )
+    elif sort_by == "title":
+        sort_column = ContentMemory.title
+        order_expr = sort_column.asc() if sort_order == "asc" else sort_column.desc()
+    else:
+        sort_column = ContentMemory.created_at
+        order_expr = sort_column.asc() if sort_order == "asc" else sort_column.desc()
+
+    # Stable secondary key so pages don't shuffle on ties.
+    stmt = (
+        stmt.order_by(order_expr, ContentMemory.id.desc())
         .offset(offset)
         .limit(page_size)
     )
     result = await db.execute(stmt)
-    return list(result.scalars().all()), total
+    return list(result.scalars().unique().all()), total
+
+
+async def delete_video(db: AsyncSession, video: ContentMemory) -> None:
+    await db.delete(video)
+    await db.flush()
 
 
 async def update_performance(

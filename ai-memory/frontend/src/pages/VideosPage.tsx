@@ -1,9 +1,29 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { Video } from "../api/types";
 import { useAccount } from "../context/AccountContext";
-import { Card, ErrorMessage, LifecycleBadge, Loading } from "../components/ui";
+import {
+  Card,
+  ConfirmDialog,
+  ErrorMessage,
+  LifecycleBadge,
+  Loading,
+} from "../components/ui";
+
+type SortBy = "created_at" | "publish_time" | "views" | "title";
+type SortOrder = "asc" | "desc";
+
+const SORT_OPTIONS: { value: string; sort_by: SortBy; sort_order: SortOrder; label: string }[] = [
+  { value: "publish_time_desc", sort_by: "publish_time", sort_order: "desc", label: "发布时间 · 新→旧" },
+  { value: "publish_time_asc", sort_by: "publish_time", sort_order: "asc", label: "发布时间 · 旧→新" },
+  { value: "created_at_desc", sort_by: "created_at", sort_order: "desc", label: "创建时间 · 新→旧" },
+  { value: "created_at_asc", sort_by: "created_at", sort_order: "asc", label: "创建时间 · 旧→新" },
+  { value: "views_desc", sort_by: "views", sort_order: "desc", label: "播放量 · 高→低" },
+  { value: "views_asc", sort_by: "views", sort_order: "asc", label: "播放量 · 低→高" },
+  { value: "title_asc", sort_by: "title", sort_order: "asc", label: "标题 · A→Z" },
+  { value: "title_desc", sort_by: "title", sort_order: "desc", label: "标题 · Z→A" },
+];
 
 export function VideosPage() {
   const { accountId, currentAccount } = useAccount();
@@ -11,25 +31,59 @@ export function VideosPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
+  const [sortKey, setSortKey] = useState("publish_time_desc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Video | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  const sortOption = SORT_OPTIONS.find((o) => o.value === sortKey) ?? SORT_OPTIONS[0];
+
+  const loadVideos = useCallback(async () => {
     if (!accountId) return;
     setLoading(true);
-    api
-      .listVideos(accountId, {
+    setError("");
+    try {
+      const data = await api.listVideos(accountId, {
         page,
         page_size: 20,
         lifecycle_status: statusFilter || undefined,
-      })
-      .then((data) => {
-        setVideos(data.items);
-        setTotal(data.total);
-      })
-      .catch((e) => setError(e instanceof ApiError ? String(e.message) : "加载失败"))
-      .finally(() => setLoading(false));
-  }, [accountId, page, statusFilter]);
+        sort_by: sortOption.sort_by,
+        sort_order: sortOption.sort_order,
+      });
+      setVideos(data.items);
+      setTotal(data.total);
+    } catch (e) {
+      setError(e instanceof ApiError ? String(e.message) : "加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [accountId, page, statusFilter, sortOption.sort_by, sortOption.sort_order]);
+
+  useEffect(() => {
+    loadVideos();
+  }, [loadVideos]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await api.deleteVideo(deleteTarget.id);
+      setDeleteTarget(null);
+      // If last item on page was deleted, go back a page.
+      if (videos.length === 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await loadVideos();
+      }
+    } catch (e) {
+      setError(e instanceof ApiError ? String(e.message) : "删除失败");
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const totalPages = Math.ceil(total / 20) || 1;
 
@@ -58,6 +112,7 @@ export function VideosPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
+          aria-label="按状态筛选"
         >
           <option value="">全部状态</option>
           <option value="created">已创建</option>
@@ -66,6 +121,20 @@ export function VideosPage() {
           <option value="tagged">已打标</option>
           <option value="learned">已学习</option>
           <option value="archived">已归档</option>
+        </select>
+        <select
+          value={sortKey}
+          onChange={(e) => {
+            setSortKey(e.target.value);
+            setPage(1);
+          }}
+          aria-label="排序"
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -93,6 +162,7 @@ export function VideosPage() {
                   <th>完播率</th>
                   <th>Prompt</th>
                   <th>发布时间</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,6 +187,17 @@ export function VideosPage() {
                       {v.publish_time
                         ? new Date(v.publish_time).toLocaleDateString("zh-CN")
                         : "—"}
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger"
+                          onClick={() => setDeleteTarget(v)}
+                        >
+                          删除
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -145,6 +226,22 @@ export function VideosPage() {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="删除视频"
+        message={
+          deleteTarget
+            ? `确定删除「${deleteTarget.title}」？相关表现数据与同步记录也会一并删除，此操作不可恢复。`
+            : ""
+        }
+        confirmLabel="删除"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => {
+          if (!deleting) setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

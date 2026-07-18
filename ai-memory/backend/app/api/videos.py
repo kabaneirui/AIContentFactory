@@ -19,6 +19,7 @@ from app.schemas.video import (
 from app.services import dna_tagger, video_import_service, video_service
 from app.services.dna_tagger import DnaTaggingError
 from app.services.dna_trigger import schedule_video_tagging, schedule_videos_tagging
+from app.services.video_service import VideoSortBy, VideoSortOrder
 
 router = APIRouter(tags=["videos"])
 
@@ -111,6 +112,8 @@ async def list_videos(
     dna_title_type: str | None = None,
     dna_pacing: str | None = None,
     dna_cta: str | None = None,
+    sort_by: VideoSortBy = Query("publish_time"),
+    sort_order: VideoSortOrder = Query("desc"),
 ) -> VideoListResponse:
     items, total = await video_service.list_videos(
         db,
@@ -131,6 +134,8 @@ async def list_videos(
             dna_pacing=dna_pacing,
             dna_cta=dna_cta,
         ),
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
     return VideoListResponse(
         items=items,
@@ -233,6 +238,14 @@ async def update_video_metadata(
     refreshed = await video_service.get_video_by_id(db, video.id)
     assert refreshed is not None
     return refreshed
+
+
+@router.delete("/videos/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_video(
+    video: ContentMemory = Depends(get_video),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await video_service.delete_video(db, video)
 
 
 @router.post("/videos/{video_id}/retag", response_model=RetagResponse)

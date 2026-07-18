@@ -108,12 +108,20 @@ export const api = {
 
   listVideos: (
     accountId: number,
-    params: { page?: number; page_size?: number; lifecycle_status?: string } = {},
+    params: {
+      page?: number;
+      page_size?: number;
+      lifecycle_status?: string;
+      sort_by?: "created_at" | "publish_time" | "views" | "title";
+      sort_order?: "asc" | "desc";
+    } = {},
   ) => {
     const query = new URLSearchParams();
     if (params.page) query.set("page", String(params.page));
     if (params.page_size) query.set("page_size", String(params.page_size));
     if (params.lifecycle_status) query.set("lifecycle_status", params.lifecycle_status);
+    if (params.sort_by) query.set("sort_by", params.sort_by);
+    if (params.sort_order) query.set("sort_order", params.sort_order);
     const qs = query.toString();
     return request<VideoListResponse>(
       `/accounts/${accountId}/videos${qs ? `?${qs}` : ""}`,
@@ -121,6 +129,9 @@ export const api = {
   },
 
   getVideo: (videoId: number) => request<Video>(`/videos/${videoId}`),
+
+  deleteVideo: (videoId: number) =>
+    request<void>(`/videos/${videoId}`, { method: "DELETE" }),
 
   createVideo: (accountId: number, data: VideoCreate) =>
     request<Video>(`/accounts/${accountId}/videos`, {

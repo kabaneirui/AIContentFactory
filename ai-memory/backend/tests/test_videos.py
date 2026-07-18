@@ -160,6 +160,56 @@ async def test_update_video_metadata_sets_platform_video_id(
 
 
 @pytest.mark.asyncio
+async def test_delete_video(client: AsyncClient, account_id: int):
+    create_resp = await client.post(
+        f"/accounts/{account_id}/videos",
+        json={"title": "待删除视频"},
+    )
+    video_id = create_resp.json()["id"]
+
+    delete_resp = await client.delete(f"/videos/{video_id}")
+    assert delete_resp.status_code == 204
+
+    detail = await client.get(f"/videos/{video_id}")
+    assert detail.status_code == 404
+
+    listed = await client.get(f"/accounts/{account_id}/videos")
+    assert all(item["id"] != video_id for item in listed.json()["items"])
+
+
+@pytest.mark.asyncio
+async def test_list_videos_sort_by_views(client: AsyncClient, account_id: int):
+    low = await client.post(
+        f"/accounts/{account_id}/videos",
+        json={"title": "低播放"},
+    )
+    high = await client.post(
+        f"/accounts/{account_id}/videos",
+        json={"title": "高播放"},
+    )
+    low_id = low.json()["id"]
+    high_id = high.json()["id"]
+
+    await client.patch(f"/videos/{low_id}/performance", json={"views": 10})
+    await client.patch(f"/videos/{high_id}/performance", json={"views": 999})
+
+    desc = await client.get(
+        f"/accounts/{account_id}/videos",
+        params={"sort_by": "views", "sort_order": "desc"},
+    )
+    assert desc.status_code == 200
+    titles = [item["title"] for item in desc.json()["items"]]
+    assert titles.index("高播放") < titles.index("低播放")
+
+    asc = await client.get(
+        f"/accounts/{account_id}/videos",
+        params={"sort_by": "views", "sort_order": "asc"},
+    )
+    titles_asc = [item["title"] for item in asc.json()["items"]]
+    assert titles_asc.index("低播放") < titles_asc.index("高播放")
+
+
+@pytest.mark.asyncio
 async def test_import_videos_json(client: AsyncClient, account_id: int):
     response = await client.post(
         f"/accounts/{account_id}/videos/import",
